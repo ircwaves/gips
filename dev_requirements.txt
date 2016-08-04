@@ -2,3 +2,4 @@
 pytest
 scripttest
 envoy
+django==1.10
