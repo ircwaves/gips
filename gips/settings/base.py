@@ -37,22 +37,26 @@ DATABASES = {
     }
 }
 
+# Django apps
+INSTALLED_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+]
 
 REPOS = {
-    # 'aod': {
-    #     'repository': '$TLD/aod',
-    # },
-    # 'landsat': {
-    #     'repository': '$TLD/landsat',
-    #     # Landsat specific settings
-    #     '6S': False,            # atm correction for VIS/NIR/SWIR bands
-    #     'MODTRAN': False,       # atm correction for LWIR
-    #     'extract': False,       # extract files from tar.gz before processing instead of direct access
-    # },
+    'aod': {
+        'repository': '$TLD/aod',
+    },
+    'landsat': {
+        'repository': '$TLD/landsat',
+        # Landsat specific settings
+        '6S': False,            # atm correction for VIS/NIR/SWIR bands
+        'MODTRAN': False,       # atm correction for LWIR
+        'extract': False,       # extract files from tar.gz before processing instead of direct access
+    },
     'modis': {
-        'repository': '/data/repos/modis',
-        'username': 'demiurge',
-        'password': 'P4ssw0rd!',
+        'repository': '$TLD/modis',
     },
     # these drivers tend to more specialized and experimental so turned off by default
     #'cdl': {
