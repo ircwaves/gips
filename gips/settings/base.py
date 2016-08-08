@@ -37,11 +37,14 @@ DATABASES = {
     }
 }
 
+SECRET_KEY = 'notempty'
+
 # Django apps
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'gips.inventory',
 ]
 
 REPOS = {
