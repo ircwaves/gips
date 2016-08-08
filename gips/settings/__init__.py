@@ -1,4 +1,8 @@
-import os, sys, glob, importlib
+import os, sys
+import glob
+import importlib
+import itertools
+
 
 DEFAULT = 'default'
 
