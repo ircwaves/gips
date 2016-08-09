@@ -11,6 +11,7 @@ class Project(models.Model):
     def __unicode__(self):
         return self.shapefile
 
+
 class FileAsset(models.Model):
     filepath = models.CharField(max_length=1000, primary_key=True)
     product = models.CharField(max_length=256, null=True, blank=True)
