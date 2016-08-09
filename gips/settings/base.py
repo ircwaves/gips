@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 ]
 
 REPOS = {
+'''
     'aod': {
         'repository': '$TLD/aod',
     },
@@ -62,21 +63,22 @@ REPOS = {
         'repository': '$TLD/modis',
     },
     # these drivers tend to more specialized and experimental so turned off by default
-    #'cdl': {
-    #    'repository': '$TLD/cdl',
-    #},
-    #'sar': {
-    #    'repository': '$TLD/sar',
-    #},
-    #'sarannual': {
-    #    'repository': '$TLD/sarannual',
-    #},
-    #'merra': {
-    #    'repository': '$TLD/Merra',
-    #},
-    #'daymet': {
-    #    'repository': '$TLD/daymet',
-    #},
+    'cdl': {
+        'repository': '$TLD/cdl',
+    },
+    'sar': {
+        'repository': '$TLD/sar',
+    },
+    'sarannual': {
+        'repository': '$TLD/sarannual',
+    },
+    'merra': {
+        'repository': '$TLD/Merra',
+    },
+    'daymet': {
+        'repository': '$TLD/daymet',
+    },
+'''
 }
 
 
