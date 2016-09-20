@@ -16,7 +16,7 @@ STD_PROD_ARGS = STD_ARGS + product_args
 
 @pytest.fixture
 def setup_landsat_data(pytestconfig):
-    """Use gips_inventory to ensure presence of MODIS data in the data repo."""
+    """Use gips_inventory to ensure presence of landsat data in the data repo."""
     driver = 'landsat'
     if not pytestconfig.getoption('setup_repo'):
         logger.info("Skipping repo setup per lack of option.")
@@ -31,7 +31,7 @@ def setup_landsat_data(pytestconfig):
 
 
 def t_info(repo_env, expected):
-    """Test `gips_info modis` and confirm recorded output is given."""
+    """Test `gips_info landsat` and confirm recorded output is given."""
     actual = repo_env.run('gips_info', 'landsat')
     assert expected == actual
 
@@ -56,21 +56,21 @@ def t_project(setup_landsat_data, clean_repo_env, output_tfe, expected):
 
 
 def t_project_no_warp(setup_landsat_data, clean_repo_env, output_tfe, expected):
-    """Test gips_project modis without warping."""
+    """Test gips_project landsat without warping."""
     args = STD_PROD_ARGS + ('--outdir', OUTPUT_DIR, '--notld')
     actual = output_tfe.run('gips_project', *args)
     assert expected == actual
 
 
 def t_tiles(setup_landsat_data, clean_repo_env, output_tfe, expected):
-    """Test gips_tiles modis with warping."""
+    """Test gips_tiles landsat with warping."""
     args = STD_PROD_ARGS + ('--outdir', OUTPUT_DIR, '--notld')
     actual = output_tfe.run('gips_tiles', *args)
     assert expected == actual
 
 @slow
 def t_tiles_copy(setup_landsat_data, clean_repo_env, output_tfe, expected):
-    """Test gips_tiles modis with copying."""
+    """Test gips_tiles landsat with copying."""
     # doesn't quite use STD_ARGS
     # -p ref-toa ndvi-toa rad-toa
     args = ('landsat', '-t', '012030', '-d', '2015-352', '-v', '4',
