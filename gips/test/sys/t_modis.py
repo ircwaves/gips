@@ -30,7 +30,7 @@ def t_inventory(setup_modis_data, repo_env, expected):
 
     This is currently the fastest test so if you want to run this file to
     confirm its sanity without running a bunch of slow tests, do this:
-        $ py.test gips/test/test_e2e_modis.py::test_inventory
+        $ py.test gips/test/t_modis.py::t_inventory
     """
     actual = repo_env.run('gips_inventory', *STD_ARGS)
     assert expected == actual
