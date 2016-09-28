@@ -129,6 +129,7 @@ t_project = { 'created': {
     '0/2012338_MOD-MYD_obstime.tif': -922366135,
     '0/2012338_MOD-MYD_temp.tif': -869467051,
     '0/2012338_MOD_clouds.tif': 1789735888,
+    '0/site-mask.tif': -63946378,
 }}
 
 t_project_two_runs = t_project
@@ -158,6 +159,7 @@ t_project_no_warp = { 'created': {
     '0/2012338_MOD-MYD_obstime.tif': -1256437319,
     '0/2012338_MOD-MYD_temp.tif': -566077737,
     '0/2012338_MOD_clouds.tif': -1110899594,
+    '0/site-mask.tif': -1735235706,
 }}
 
 # TODO there should be something here but nothing is saved here during manual runs.

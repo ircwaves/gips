@@ -29,7 +29,7 @@ import traceback
 import gippy
 from gippy.algorithms import CookieCutter
 from gips.core import SpatialExtent
-from gips.utils import VerboseOut, Colors, mosaic, mkdir
+from gips.utils import VerboseOut, Colors, mosaic, mkdir, crop2vector
 
 
 class Tiles(object):
@@ -75,7 +75,7 @@ class Tiles(object):
         """ Calls process for each tile """
         [t.process(*args, products=self.products.products, **kwargs) for t in self.tiles.values()]
 
-    def mosaic(self, datadir, res=None, interpolation=0, crop=False,
+    def mosaic(self, datadir, tree=False, res=None, interpolation=0, crop=False,
                overwrite=False, alltouch=False):
         """ Combine tiles into a single mosaic, warp if res provided """
         if self.spatial.site is None:
@@ -94,13 +94,35 @@ class Tiles(object):
                 try:
                     filenames = [self.tiles[t].filenames[(sensor, product)] for t in self.tiles]
                     images = gippy.GeoImages(filenames)
+                    if tree:
+                        maskdir = os.path.dirname(os.path.normpath(datadir))
+                    else:
+                        maskdir = datadir
+                    sitemask = os.path.join(maskdir, "site-mask.tif")
                     if self.spatial.site is not None and res is not None:
                         CookieCutter(
                             images, self.spatial.site, fout, res[0], res[1],
                             crop, interpolation, {}, alltouch,
                         )
+                        # TODO - JF - overwrite will cause it to create site-mask during creation of each product
+                        #           - ineficient, but preferable to not allowing overwrite of mask at all
+                        if not os.path.exists(sitemask) or overwrite:
+                            tmp_smask = os.path.join(maskdir, "temp-site-mask.tif")
+                            fout_image = gippy.GeoImage(fout)
+                            mask_image = gippy.GeoImage(tmp_smask, fout_image, gippy.GDT_Byte, 1)
+                            mask_image[0] = mask_image[0] * 0 + 1
+                            mask_image.Process()
+                            mask_image = None
+                            images = gippy.GeoImages([tmp_smask])
+                            CookieCutter(
+                                images, self.spatial.site, tmp_smask, res[0], res[1],
+                                crop, interpolation, {}, alltouch,
+                            )
+                            os.rename(tmp_smask, sitemask)
                     else:
-                        mosaic(images, fout, self.spatial.site)
+                        if os.path.exists(sitemask) and not overwrite:
+                            sitemask = None
+                        mosaic(images, fout, self.spatial.site, sitemask)
                 except Exception, e:
                     VerboseOut(traceback.format_exc(), 4)
                     VerboseOut("Error mosaicking %s: %s" % (fout, e))

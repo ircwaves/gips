@@ -307,14 +307,18 @@ def transform(filename, srs):
     return fout
 
 
-def crop2vector(img, vector):
+def crop2vector(img, vector, mask_save_name=None):
     """ Crop a GeoImage down to a vector - only used by mosaic """
     # transform vector to srs of image
     vecname = transform(vector.Filename(), img.Projection())
     warped_vec = open_vector(vecname)
+    if mask_save_name is None:
+        td = tempfile.mkdtemp()
+        maskname = os.path.join(td, vector.LayerName())
+    else:
+        maskname = os.path.join(os.path.dirname(mask_save_name), 'tmp-' + os.path.basename(mask_save_name))
     # rasterize the vector
-    td = tempfile.mkdtemp()
-    mask = gippy.GeoImage(os.path.join(td, vector.LayerName()), img, gippy.GDT_Byte, 1)
+    mask = gippy.GeoImage(maskname, img, gippy.GDT_Byte, 1)
     maskname = mask.Filename()
     mask = None
     cmd = 'gdal_rasterize -at -burn 1 -l %s %s %s' % (warped_vec.LayerName(), vecname, maskname)
@@ -323,13 +327,16 @@ def crop2vector(img, vector):
     mask = gippy.GeoImage(maskname)
     img.AddMask(mask[0]).Process().ClearMasks()
     mask = None
-    shutil.rmtree(os.path.dirname(maskname))
     shutil.rmtree(os.path.dirname(vecname))
+    if mask_save_name is None:
+        shutil.rmtree(os.path.dirname(maskname))
+    else:
+        os.rename(maskname, mask_save_name)
     # VerboseOut('Cropped to vector in %s' % (datetime.now() - start), 3)
     return img
 
 
-def mosaic(images, outfile, vector):
+def mosaic(images, outfile, vector, mask_save_name=None):
     """ Mosaic multiple files together, but do not warp """
     nd = images[0][0].NoDataValue()
     srs = images[0].Projection()
@@ -354,7 +361,7 @@ def mosaic(images, outfile, vector):
     for b in range(0, images[0].NumBands()):
         imgout[b].CopyMeta(images[0][b])
     imgout.CopyColorTable(images[0])
-    return crop2vector(imgout, vector)
+    return crop2vector(imgout, vector, mask_save_name)
 
 
 # old code utilizing shared memory array

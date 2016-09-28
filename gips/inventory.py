@@ -302,7 +302,7 @@ class DataInventory(Inventory):
         for d in self.dates:
             if tree:
                 dout = os.path.join(datadir, d.strftime('%Y%j'))
-            self.data[d].mosaic(dout, **kwargs)
+            self.data[d].mosaic(dout, tree, **kwargs)
 
         VerboseOut('Completed mosaic project in %s' % (dt.now() - start), 2)
 

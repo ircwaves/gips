@@ -112,6 +112,7 @@ t_project = {
         '0/2015352_LC8_ndvi-toa.tif': 844246796,
         '0/2015352_LC8_rad-toa.tif': -317896577,
         '0/2015352_LC8_ref-toa.tif': -1496156246,
+        '0/site-mask.tif': 1316055677,
     }
 }
 
@@ -124,6 +125,7 @@ t_project_no_warp = {
         '0/2015352_LC8_ndvi-toa.tif': 1466287813,
         '0/2015352_LC8_rad-toa.tif': 1618019596,
         '0/2015352_LC8_ref-toa.tif': -614392204,
+        '0/site-mask.tif': -1933570072,
     }
 }
 
