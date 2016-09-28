@@ -35,7 +35,7 @@ def t_inventory(setup_modis_data, repo_env, expected):
     actual = repo_env.run('gips_inventory', *STD_ARGS)
     assert expected == actual
 
-
+@pytest.mark.xfail
 def t_process(setup_modis_data, repo_env, expected):
     """Test gips_process on modis data."""
     actual = repo_env.run('gips_process', *STD_ARGS)
