@@ -57,14 +57,15 @@ def main():
 
             if args.filemask is not None:
                 mask_file = gippy.GeoImage(args.filemask)
+            elif args.pmask == []:
+                raise GIPSParser.error(
+                    "--filemask and/or --pmask must be specified"
+                )
 
             inv = ProjectInventory(projdir, args.products)
             for date in inv.dates:
                 VerboseOut('Masking files from %s' % date)
-                if args.filemask is None and args.pmask == []:
-                    available_masks = inv[date].masks()
-                else:
-                    available_masks = inv[date].masks(args.pmask)
+                available_masks = inv[date].masks(args.pmask)
                 for p in inv.products(date):
                     # don't mask any masks
                     if p in available_masks:
