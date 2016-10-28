@@ -41,3 +41,17 @@ class Product(models.Model):
     class Meta:
         # These four columns uniquely identify an asset file
         unique_together = ('driver', 'product', 'tile', 'date')
+
+
+class Result(models.Model):
+    band = models.CharField(max_length=255)
+    count = models.IntegerField(null=True, blank=True)
+    date = models.DateField()
+    maximum = models.FloatField(null=True, blank=True)
+    mean = models.FloatField(null=True, blank=True)
+    skew = models.FloatField(null=True, blank=True)
+    minimum = models.FloatField(null=True, blank=True)
+    product = models.CharField(max_length=255)
+    sd = models.FloatField(null=True, blank=True)
+    fid = models.IntegerField()
+
