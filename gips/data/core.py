@@ -701,8 +701,6 @@ class Data(object):
     # TODO - make general product_filter function
     def masks(self, patterns=None):
         """ List all products that are masks """
-        if patterns is None:
-            patterns = ['mask']
         m = []
         for p in self.products:
             if any(pattern in p for pattern in patterns):
