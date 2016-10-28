@@ -807,6 +807,17 @@ class landsatData(Data):
                 return False
         return True
 
+    def masks(self, patterns=None):
+        """ List all products that are masks, or subset products by patterns """
+        if patterns is None:
+            patterns = ['acca', 'fmask', 'mask']
+        m = [
+            p for p in self.products
+            if any(pat in p for pat in patterns)
+        ]
+
+        return m
+
     def meta(self):
         """ Read in Landsat MTL (metadata) file """
 

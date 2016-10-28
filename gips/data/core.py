@@ -702,7 +702,7 @@ class Data(object):
     def masks(self, patterns=None):
         """ List all products that are masks """
         if patterns is None:
-            patterns = ['acca', 'fmask', 'mask']
+            patterns = ['mask']
         m = []
         for p in self.products:
             if any(pattern in p for pattern in patterns):
