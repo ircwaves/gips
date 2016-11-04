@@ -20,6 +20,9 @@ DEBUG = False
 ALLOWED_HOSTS = []
 
 
+# Needed for zonal_wrapper.py should probably move to local settings
+GIPSBIN_PATH = '/home/remery/Projects/GipsAlg/gips-bin/gipsbin'
+
 # Application definition
 
 INSTALLED_APPS = [

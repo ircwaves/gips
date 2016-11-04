@@ -43,15 +43,25 @@ class Product(models.Model):
         unique_together = ('driver', 'product', 'tile', 'date')
 
 
+class DataVariable(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.CharField()
+    asset = models.CharField(max_length=255)
+    product = models.CharField(max_length=255)
+    layer = models.IntegerField(blank=True, null=True)
+
+
 class Result(models.Model):
+    site = models.CharField(max_length=255)
     band = models.CharField(max_length=255)
-    count = models.IntegerField(null=True, blank=True)
+    count = models.IntegerField(blank=True, null=True)
     date = models.DateField()
     maximum = models.FloatField(null=True, blank=True)
     mean = models.FloatField(null=True, blank=True)
     skew = models.FloatField(null=True, blank=True)
     minimum = models.FloatField(null=True, blank=True)
-    product = models.CharField(max_length=255)
+    product = models.ForeignKey(DataVariable)
     sd = models.FloatField(null=True, blank=True)
     fid = models.IntegerField()
+    sensor = models.CharField(max_length=255)
 
