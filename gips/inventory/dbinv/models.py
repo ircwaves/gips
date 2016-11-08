@@ -45,7 +45,7 @@ class Product(models.Model):
 
 class DataVariable(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    description = models.CharField()
+    description = models.CharField(max_length=255)
     asset = models.CharField(max_length=255)
     product = models.CharField(max_length=255)
     layer = models.IntegerField(blank=True, null=True)
@@ -67,4 +67,4 @@ class Result(models.Model):
     site = models.CharField(max_length=255)
 
     class Meta:
-        unique_together = (feature_set, date, product, site)
+        unique_together = ('feature_set', 'date', 'product', 'site')
