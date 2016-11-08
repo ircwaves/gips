@@ -12,9 +12,6 @@ import django
 django.setup()
 from gips.inventory.dbinv.models import Result
 from gips.inventory.orm import settings
-#TODO: Actually import gips
-print settings.GIPSBIN_PATH
-#sys.path.append(settings.GIPS_PATH)
 sys.path.append(settings.GIPSBIN_PATH)
 from zonalsummary import ZonalSummary
 
