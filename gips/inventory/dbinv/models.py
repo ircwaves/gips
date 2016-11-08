@@ -44,7 +44,7 @@ class Product(models.Model):
 
 
 class DataVariable(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     description = models.CharField()
     asset = models.CharField(max_length=255)
     product = models.CharField(max_length=255)
@@ -52,8 +52,8 @@ class DataVariable(models.Model):
 
 
 class Result(models.Model):
-    site = models.CharField(max_length=255)
-    band = models.CharField(max_length=255)
+    feature_set = models.CharField(max_length=255)
+    #band = models.CharField(max_length=255)
     count = models.IntegerField(blank=True, null=True)
     date = models.DateField()
     maximum = models.FloatField(null=True, blank=True)
@@ -63,5 +63,8 @@ class Result(models.Model):
     product = models.ForeignKey(DataVariable)
     sd = models.FloatField(null=True, blank=True)
     fid = models.IntegerField()
-    sensor = models.CharField(max_length=255)
+    #sensor = models.CharField(max_length=255)
+    site = models.CharField(max_length=255)
 
+    class Meta:
+        unique_together = (feature_set, date, product, site)
