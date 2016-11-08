@@ -10,7 +10,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gips.inventory.orm.settings")
 #os.chdir(proj_path)
 import django
 django.setup()
-from gips.inventory.dbinv.models import Result
+from gips.inventory.dbinv.models import Result, DataVariable
 from gips.inventory.orm import settings
 sys.path.append(settings.GIPSBIN_PATH)
 from zonalsummary import ZonalSummary
@@ -47,9 +47,21 @@ def make_result(result):
             sd=sd,
             skew=skew,
             count=count,
+            product=G_DV,
             site=G_SITE
         )
         r.save()
+
+
+def get_product(prod):
+    try:
+        dv = DataVariable.objects.get(name=prod)
+    except django.core.exceptions.ObjectDoesNotExist:
+        print 'Product with name "{}" does not exist'.format(prod)
+        exit(1)
+    
+    return dv
+
 
 def main():
     path = os.path.dirname(os.path.abspath(__file__))
@@ -63,6 +75,11 @@ def main():
         help='GeoKit site requesting data'
     )
     parser.add_argument(
+        '-p',
+        '--product',
+        required=True,
+    )
+    parser.add_argument(
         '-d',
         '--projdir',
         required=True,
@@ -70,15 +87,15 @@ def main():
         default=path
 
     )
+
     init_args = parser.parse_args()
-
     G_SITE = init_args.site
-
+    G_DV = get_product(init_args.product)
     a = ZonalSummary(projdir=init_args.projdir)
 
     args = {
         'stats': ['min', 'max', 'mean', 'sd', 'skew', 'count'],
-        'shapefile': init_args.vector,
+        'shapefile': None,
         'outdir': None,
         'rasterpaths': None,
         'bands': [],
@@ -92,7 +109,7 @@ def main():
         'processes': 1,
         'outfile': None,
         'alltouch': False,
-        'continue': False
+        'continue': False,
 
     }
 
