@@ -10,20 +10,17 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gips.inventory.orm.settings")
 #os.chdir(proj_path)
 import django
 django.setup()
-from gips.inventory.dbinv.models import Result, DataVariable
+from gips.inventory.dbinv.models import Result, DataVariable, Vector
 from gips.inventory.orm import settings
 sys.path.append(settings.GIPSBIN_PATH)
 from zonalsummary import ZonalSummary
 
-G_SITE = ''
 
-
-def make_result(result):
+def make_result(result, g_dv, g_site, source):
     key = result[0]
     bands = result[1]
 
     date = key[0]
-    product = key[1]
     fid = int(key[2])
 
     for band in bands.keys():
@@ -36,19 +33,26 @@ def make_result(result):
         skew = float(stats[4]) if stats[4] != 'nan' else None
         count = float(stats[5]) if stats[5] != 'nan' else None
 
+        try:
+            vector = Vector.objects.get(source=source, fid=fid)
+        except:
+            error = '''Could not find Vector without 
+                    src/fid {}/{}'''.format(source, fid)
+            print error
+            vector = None
+
         r = Result(
             date=date,
-            band=band,
             fid=fid,
-            product=product,
             minimum=minimum,
             maximum=maximum,
             mean=mean,
             sd=sd,
             skew=skew,
             count=count,
-            product=G_DV,
-            site=G_SITE
+            product=g_dv,
+            site=g_site,
+            vector=vector
         )
         r.save()
 
@@ -87,11 +91,19 @@ def main():
         default=path
 
     )
+    parser.add_argument(
+        '-r',
+        '--source',
+        help='Source of shapes',
+        required=True
+    )
 
     init_args = parser.parse_args()
-    G_SITE = init_args.site
-    G_DV = get_product(init_args.product)
+    g_site = init_args.site
+    g_dv = get_product(init_args.product)
     a = ZonalSummary(projdir=init_args.projdir)
+
+    source = init_args.source
 
     args = {
         'stats': ['min', 'max', 'mean', 'sd', 'skew', 'count'],
@@ -115,7 +127,7 @@ def main():
 
     results = a.run(**args)
     for r in results:
-        make_result(r)
+        make_result(r, g_dv, g_site, source)
         return
 
 if __name__ == "__main__":

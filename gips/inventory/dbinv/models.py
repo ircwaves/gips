@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 
-from django.db import models
+#from django.db import models
+from django.contrib.gis.db import models
+from django.contrib.postgres.fields import HStoreField
 
 
 class Asset(models.Model):
@@ -43,6 +45,19 @@ class Product(models.Model):
         unique_together = ('driver', 'product', 'tile', 'date')
 
 
+class Vector(models.Model):
+    geom = models.GeometryField()
+    name = models.CharField(max_length=255)
+    attributes = HStoreField()
+    site = models.CharField(max_length=255, null=True, blank=True)
+    source = models.CharField(max_length=255)
+    type = models.CharField(max_length=255)
+    fid = models.IntegerField()
+
+    class Meta:
+        unique_together = ('fid', 'source')
+
+
 class DataVariable(models.Model):
     name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=255)
@@ -53,7 +68,6 @@ class DataVariable(models.Model):
 
 class Result(models.Model):
     feature_set = models.CharField(max_length=255)
-    #band = models.CharField(max_length=255)
     count = models.IntegerField(blank=True, null=True)
     date = models.DateField()
     maximum = models.FloatField(null=True, blank=True)
@@ -63,8 +77,8 @@ class Result(models.Model):
     product = models.ForeignKey(DataVariable)
     sd = models.FloatField(null=True, blank=True)
     fid = models.IntegerField()
-    #sensor = models.CharField(max_length=255)
     site = models.CharField(max_length=255)
+    vector = models.ForeignKey(Vector)
 
     class Meta:
         unique_together = ('feature_set', 'date', 'product', 'site')
