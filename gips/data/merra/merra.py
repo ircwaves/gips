@@ -38,6 +38,7 @@ from gips.data.merra import raster
 
 from pdb import set_trace
 
+
 requirements = ['pydap']
 
 MISSING = 9.999999870e+14
@@ -100,6 +101,7 @@ class merraAsset(Asset):
 
     _assets = {
         # MERRA2 SLV
+        # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2/M2T1NXSLV.5.12.4
         'TS': {
             'description': 'Surface skin temperature',
             'pattern': 'MERRA_TS_*.tif',
@@ -146,6 +148,7 @@ class merraAsset(Asset):
             'bandnames': _bandnames
         },
         # MERRA2 FLX
+        # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2/M2T1NXFLX.5.12.4/
         'PRECTOT': {
             'description': 'Total Precipitation (kg m-2 s-1)',
             'pattern': 'MERRA_PRECTOT_*.tif',
@@ -165,6 +168,7 @@ class merraAsset(Asset):
             'bandnames': _bandnames
         },
         # MERRA2 RAD
+        # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2/M2T1NXRAD.5.12.4/
         'SWGDN': {
             'description': 'Surface incident shortwave flux (W m-2)',
             'pattern': 'MERRA_SWGDN_*.tif',
@@ -174,15 +178,26 @@ class merraAsset(Asset):
             'latency': 60,
             'bandnames': _bandnames
         },
-         'PROFILE': {
-             'description': 'Atmospheric Profile',
-             'pattern': 'MAI6NVANA_PROFILE_*.tif',
-             'url': 'http://goldsmr5.sci.gsfc.nasa.gov/opendap/MERRA2/M2I6NVANA.5.12.4',
-             'source': 'MERRA2_%s.inst6_3d_ana_Nv.%04d%02d%02d.nc4',
-             'startdate': datetime.date(1980, 1, 1),
-             'latency': 60,
-             'bandnames': ['0000GMT', '0600GMT', '1200GMT', '1800GMT']
-         },
+        # MERRA2 CONST
+        # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2_MONTHLY/M2C0NXASM.5.12.4/1980/MERRA2_101.const_2d_asm_Nx.00000000.nc4
+        #'FRLAND': {
+        #    'description': 'Land Fraction',
+        #    'pattern': 'MERRA_FRLAND_*.tif',
+        #    'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
+        #    'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
+        #    'startdate': datetime.date(1980, 1, 1),
+        #    'latency': 0,
+        #    'bandnames': ['FRLAND']
+        #}
+        #'PROFILE': {
+        #     'description': 'Atmospheric Profile',
+        #     'pattern': 'MAI6NVANA_PROFILE_*.tif',
+        #     'url': 'http://goldsmr5.sci.gsfc.nasa.gov/opendap/MERRA2/M2I6NVANA.5.12.4',
+        #     'source': 'MERRA2_%s.inst6_3d_ana_Nv.%04d%02d%02d.nc4',
+        #     'startdate': datetime.date(1980, 1, 1),
+        #     'latency': 60,
+        #     'bandnames': ['0000GMT', '0600GMT', '1200GMT', '1800GMT']
+        #},
         # 'PROFILEP': {
         #     'description': 'Atmospheric Profile',
         #     'pattern': 'MAI6NVANA_PROFILE_*.tif',
@@ -192,17 +207,6 @@ class merraAsset(Asset):
         #     'latency': 60,
         #     'bandnames': ['0000GMT', '0600GMT', '1200GMT', '1800GMT']
         # },
-        # MERRA2 CONST
-        'FRLAND': {
-            'description': 'Land Fraction',
-            'pattern': 'MERRA_FRLAND_*.tif',
-            'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
-            'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
-            'startdate': datetime.date(1980, 1, 1),
-            'latency': 0,
-            'bandnames': ['FRLAND']
-        }
-
     }
 
     _origin = (-180., -90.)
@@ -229,8 +233,15 @@ class merraAsset(Asset):
             raise Exception("%s: URL not defined for asset %s" % (cls.__name__, asset))
         success = False
 
-        for ver in ['100', '200', '300', '301', '400']:
+        #rightloc = 'http://bobbyhbraswell:Coffeedog_2@goldsmr4.sci.gsfc.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/2010/01/MERRA2_300.tavg1_2d_slv_Nx.20100101.nc4'
+        #dataset = open_url(loc)
+        #set_trace()
 
+        #for ver in ['100', '200', '300', '301', '400']:
+        for ver in ['300']:
+
+            print "****ver",ver
+            
             if asset != "FRLAND":
                 f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
                 loc = "%s/%04d/%02d/%s" % (url, date.year, date.month, f)
@@ -239,12 +250,26 @@ class merraAsset(Asset):
                 loc = "%s/1980/%s" % (url, f)
             try:
                 with Timeout(30):
+                    
+                    loc = 'http://bobbyhbraswell:Coffeedog_2@goldsmr4.sci.gsfc.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/2010/01/MERRA2_%s.tavg1_2d_slv_Nx.20100101.nc4'
+                    loc = loc % ver
+
+                    print "*****loc", loc
+                    
                     dataset = open_url(loc)
+
+                    # NEED TO DO THIS
+                    # dataset = open_url('http://<USERNAME>:<PASSWORD>@server[:port]/path/file[.format[?subset]]')
+
+                    #set_trace()
+                    
             except Timeout.Timeout:
                 # change to verbose_out()
                 print "Timeout"
             except Exception,e:
                 # TODO error-handling-fix: refactor the whole method to use sensible error reporting
+                print "some other exception", e
+                time.sleep(3)
                 pass
             else:
                 success = True
@@ -254,6 +279,7 @@ class merraAsset(Asset):
             raise Exception('Data unavailable (%s)' % loc)
         return dataset
 
+    
     @classmethod
     def lonlat2xy(cls, lon, lat):
         """ Convert from lon-lat to x-y in array """
@@ -301,6 +327,8 @@ class merraAsset(Asset):
 
         VerboseOut('Retrieving data for bounds (%s, %s) - (%s, %s)' % (bounds[0], bounds[1], bounds[2], bounds[3]), 3)
 
+        set_trace()
+        
         data = dataset[asset][:, iy0:iy1, ix0:ix1].astype('float32')
         data = data[:, ::-1, :]
 
