@@ -24,6 +24,15 @@
 import os
 import datetime
 import time
+
+from gips.data.merra.install_basic_client import install_basic_client
+
+URI = "urs.earthdata.nasa.gov"
+USER = "bobbyhbraswell"
+PASSWD = "Coffeedog_2"
+
+install_basic_client(URI, USER, PASSWD, False)
+
 from pydap.client import open_url
 import numpy
 import signal
@@ -233,14 +242,7 @@ class merraAsset(Asset):
             raise Exception("%s: URL not defined for asset %s" % (cls.__name__, asset))
         success = False
 
-        #rightloc = 'http://bobbyhbraswell:Coffeedog_2@goldsmr4.sci.gsfc.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/2010/01/MERRA2_300.tavg1_2d_slv_Nx.20100101.nc4'
-        #dataset = open_url(loc)
-        #set_trace()
-
-        #for ver in ['100', '200', '300', '301', '400']:
-        for ver in ['300']:
-
-            print "****ver",ver
+        for ver in ['100', '200', '300', '301', '400']:
             
             if asset != "FRLAND":
                 f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
@@ -249,33 +251,23 @@ class merraAsset(Asset):
                 f = cls._assets[asset]['source'] % (ver, 0, 0, 0)
                 loc = "%s/1980/%s" % (url, f)
             try:
-                with Timeout(30):
-                    
-                    loc = 'http://bobbyhbraswell:Coffeedog_2@goldsmr4.sci.gsfc.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/2010/01/MERRA2_%s.tavg1_2d_slv_Nx.20100101.nc4'
-                    loc = loc % ver
-
-                    print "*****loc", loc
-                    
+                with Timeout(30):          
                     dataset = open_url(loc)
-
-                    # NEED TO DO THIS
-                    # dataset = open_url('http://<USERNAME>:<PASSWORD>@server[:port]/path/file[.format[?subset]]')
-
-                    #set_trace()
-                    
             except Timeout.Timeout:
                 # change to verbose_out()
                 print "Timeout"
             except Exception,e:
                 # TODO error-handling-fix: refactor the whole method to use sensible error reporting
-                print "some other exception", e
-                time.sleep(3)
+                print "some other exception with ver %s" % ver, e
                 pass
             else:
                 success = True
                 break
 
         if not success:
+            # This might fail because the asset has a version number we are not searching for
+            # e.g., it might be 302, or 401. It's impossible to predict what that number will be
+            # TODO: search XML metadata to get the actual file name so you don't have to search
             raise Exception('Data unavailable (%s)' % loc)
         return dataset
 
@@ -294,10 +286,6 @@ class merraAsset(Asset):
 
         if cls._assets[asset]['latency'] is None:
             assert date == datetime.datetime(1980, 1, 1)
-
-        # if date > datetime.datetime.now():
-        #     print "These data are not available for future dates."
-        #     return None
 
         if date > (datetime.datetime.now() - datetime.timedelta(cls._assets[asset]['latency'])):
             print "These data are not available for specified dates."
@@ -326,8 +314,6 @@ class merraAsset(Asset):
         iy1 = iy0 + ysize
 
         VerboseOut('Retrieving data for bounds (%s, %s) - (%s, %s)' % (bounds[0], bounds[1], bounds[2], bounds[3]), 3)
-
-        set_trace()
         
         data = dataset[asset][:, iy0:iy1, ix0:ix1].astype('float32')
         data = data[:, ::-1, :]
