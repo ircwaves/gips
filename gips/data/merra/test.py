@@ -7,7 +7,11 @@ from install_basic_client import install_basic_client
 
 #install_basic_client(user='bobbyhbraswell', passwd='Coffeedog_2', use_netrc=False)
 
-install_basic_client()
+URI = "urs.earthdata.nasa.gov"
+USER = "bobbyhbraswell"
+PASSWD = "Coffeedog_2"
+
+install_basic_client(uri=URI, user=USER, passwd=PASSWD, use_netrc=False)
 
 from pydap.client import open_url
 
