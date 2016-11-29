@@ -39,7 +39,7 @@ def install_basic_client(uri='', user='', passwd='', use_netrc=True):
     def new_request(url):
         # Remove mysterious ampersand, based on GESDISC help response.
         # But why is it there? If it's there, why is it only there sometimes?
-        if url[-1] is '&': url = url[0:-1]
+        if url[-1] == '&': url = url[0:-1]
 
         r = urllib2.urlopen(url)            
         resp = r.headers.dict
