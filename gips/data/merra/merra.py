@@ -24,18 +24,19 @@
 import os
 import datetime
 import time
-
-from gips.data.merra.install_basic_client import install_basic_client
-
-URI = "urs.earthdata.nasa.gov"
-USER = "bobbyhbraswell"
-PASSWD = "Coffeedog_2"
-
-install_basic_client(URI, USER, PASSWD, False)
-
-from pydap.client import open_url
 import numpy
 import signal
+import urllib2
+
+# this has to be done before open_url is imported
+from gips.data.merra.install_basic_client import install_basic_client
+from gips.settings import REPOS
+USER = REPOS['merra']['username']
+PASSWD = REPOS['merra']['password']
+install_basic_client('urs.earthdata.nasa.gov', USER, PASSWD, False)
+
+from pydap.client import open_url
+from pydap.util.socks import HTTPError
 
 import gippy
 from gips.data.core import Repository, Asset, Data
@@ -43,9 +44,6 @@ from gips.utils import VerboseOut, basename, open_vector
 
 # TODO: use gippy instead
 from gips.data.merra import raster
-
-
-from pdb import set_trace
 
 
 requirements = ['pydap']
@@ -81,20 +79,13 @@ class merraRepository(Repository):
     def tile_bounds(cls, tile):
         """ Get the bounds of the tile (in same units as tiles vector) """
 
-        # vector = open_vector(cls.get_setting('tiles'))
-        # extent = vector.where('tileid==%s' % tile).extent()
-        # return [extent.x0(), extent.y0(), extent.x1(), extent.y1()]
-
         vector = open_vector(cls.get_setting('tiles'))
         features = vector.where('tileid', tile)
         if len(features) != 1:
             raise Exception('there should be a single tile with id %s' % tile)
 
-            # set_trace()
-
         extent = features[0].Extent()
         return [extent.x0(), extent.y0(), extent.x1(), extent.y1()]
-
 
 
 class merraAsset(Asset):
@@ -189,15 +180,16 @@ class merraAsset(Asset):
         },
         # MERRA2 CONST
         # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2_MONTHLY/M2C0NXASM.5.12.4/1980/MERRA2_101.const_2d_asm_Nx.00000000.nc4
-        #'FRLAND': {
-        #    'description': 'Land Fraction',
-        #    'pattern': 'MERRA_FRLAND_*.tif',
-        #    'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
-        #    'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
-        #    'startdate': datetime.date(1980, 1, 1),
-        #    'latency': 0,
-        #    'bandnames': ['FRLAND']
-        #}
+        'FRLAND': {
+            'description': 'Land Fraction',
+            'pattern': 'MERRA_FRLAND_*.tif',
+            'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
+            'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
+            'startdate': datetime.date(1980, 1, 1),
+            'latency': 0,
+            'bandnames': ['FRLAND']
+        }
+        # TODO: profile products seem to be not implemented
         #'PROFILE': {
         #     'description': 'Atmospheric Profile',
         #     'pattern': 'MAI6NVANA_PROFILE_*.tif',
@@ -220,7 +212,6 @@ class merraAsset(Asset):
 
     _origin = (-180., -90.)
     _defaultresolution = (0.625, 0.50)
-    # _defaultresolution = (0.666666666666667, 0.50)
 
     def __init__(self, filename):
         """ Inspect a single file and get some metadata """
@@ -233,33 +224,36 @@ class merraAsset(Asset):
         self.date = datetime.datetime.strptime(parts[3], '%Y%j').date()
         self.products[self.asset] = filename
 
-
     @classmethod
     def opendap_fetch(cls, asset, date):
         """ Get array proxy from OpenDap for this asset and date """
+
         url = cls._assets[asset].get('url', '')
         if url == '':
             raise Exception("%s: URL not defined for asset %s" % (cls.__name__, asset))
-        success = False
 
-        for ver in ['100', '200', '300', '301', '400']:
-            
+        # TODO: instead of trying all possible vers, get the number from XML metadata
+        success = False
+        for ver in ['100', '200', '300', '301', '400']:            
             if asset != "FRLAND":
                 f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
                 loc = "%s/%04d/%02d/%s" % (url, date.year, date.month, f)
             else:
                 f = cls._assets[asset]['source'] % (ver, 0, 0, 0)
                 loc = "%s/1980/%s" % (url, f)
+            
             try:
                 with Timeout(30):          
                     dataset = open_url(loc)
             except Timeout.Timeout:
                 # change to verbose_out()
                 print "Timeout"
+            except urllib2.HTTPError:
+                # TODO: see above
+                pass
             except Exception,e:
                 # TODO error-handling-fix: refactor the whole method to use sensible error reporting
-                print "some other exception with ver %s" % ver, e
-                pass
+                print "some other exception %s" % e
             else:
                 success = True
                 break
@@ -636,7 +630,6 @@ class merraData(Data):
 
 
             ####################################################################
-
             # ##' @param qair specific humidity, dimensionless (e.g. kg/kg) ratio of water mass / total air mass
             # ##' @param temp degrees C
             # ##' @param press pressure in mb
