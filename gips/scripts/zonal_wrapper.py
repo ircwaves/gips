@@ -11,7 +11,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gips.inventory.orm.settings")
 import django
 django.setup()
 from gips.inventory.dbinv.models import Result, DataVariable, Vector
-from gips.inventory.orm import settings
+from gips import settings
 sys.path.append(settings.GIPSBIN_PATH)
 from zonalsummary import ZonalSummary
 
