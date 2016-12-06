@@ -99,22 +99,25 @@ def main():
     )
 
     init_args = parser.parse_args()
+    projdir = init_args.projdir
     g_site = init_args.site
     g_dv = get_product(init_args.product)
-    a = ZonalSummary(projdir=init_args.projdir)
+    a = ZonalSummary(projdir=projdir)
 
     source = init_args.source
+
+    proj_name = os.path.basename(os.path.dirname(projdir))
 
     args = {
         'stats': ['min', 'max', 'mean', 'sd', 'skew', 'count'],
         'shapefile': None,
         'outdir': None,
         'rasterpaths': None,
-        'bands': [],
+        'bands': [g_dv.band_number],
         'percentiles': [],
         'filter': None,
         'passthrough': False,
-        'products': [],
+        'products': [g_dv.product],
         'nodata': None,
         'raster_dates': [],
         #TODO: Make this configurable

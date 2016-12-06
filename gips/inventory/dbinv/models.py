@@ -61,9 +61,10 @@ class Vector(models.Model):
 class DataVariable(models.Model):
     name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=255)
-    asset = models.CharField(max_length=255)
+    driver = models.CharField(max_length=255)
     product = models.CharField(max_length=255)
-    layer = models.IntegerField(blank=True, null=True)
+    band = models.CharField(max_length=255)
+    band_number = models.IntegerField(default=0)
 
 
 class Result(models.Model):
