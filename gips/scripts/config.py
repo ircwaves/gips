@@ -31,7 +31,7 @@ from django.core.management import call_command
 import gips
 from gips import __version__ as version
 from gips.parsers import GIPSParser
-from gips.utils import VerboseOut, create_environment_settings, create_user_settings, create_repos
+from gips.utils import VerboseOut, create_environment_settings, create_user_settings, create_repos, get_data_variables
 from gips.inventory import orm
 
 
@@ -43,6 +43,25 @@ def migrate_database():
     orm.setup()
     with orm.std_error_handler():
         call_command('migrate', interactive=False)
+
+
+def create_data_variables():
+    """ Create the DataVariable catalog if ORM is turned on."""
+    if not orm.use_orm():
+        return
+    print 'Creating DataVariable catalog'
+    orm.setup()
+    # This import must be run after orm.setup()
+    from gips.inventory.dbinv.models import DataVariable
+    data_variables = get_data_variables()
+
+    for dv in data_variables:
+        dv_model = DataVariable(**dv)
+        try:
+            dv_model.save()
+        except django.db.IntegrityError:
+            # Name was not unique
+            continue
 
 
 def main():
@@ -83,6 +102,7 @@ def main():
             print 'Creating repository directories'
             create_repos()
             migrate_database()
+            create_data_variables()
         except Exception, e:
             print traceback.format_exc()
             print 'Could not create environment settings: %s' % e
@@ -101,6 +121,7 @@ def main():
             print 'Creating repository directories'
             create_repos()
             migrate_database()
+            create_data_variables()
         except Exception as e:
             print traceback.format_exc()
             print 'Could not create repository directories'

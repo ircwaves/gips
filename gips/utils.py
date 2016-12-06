@@ -247,6 +247,31 @@ def import_data_module(clsname):
         print(traceback.format_exc())
 
 
+def get_data_variables():
+    sources = data_sources()
+
+    data_variables = []
+
+    # ex asset = modis
+    for driver in sources.keys():
+        data_class = import_data_class(driver)
+        for product in data_class._products.keys():
+            product_dict = data_class._products[product]
+            description = product_dict['description']
+            for band,bandname in enumerate(product_dict['bands']):
+                data_variable = {
+                    'driver': driver,
+                    'description': description,
+                    'product': product,
+                    'name': "{}_{}_{}".format(driver, product, bandname),
+                    'band_number': band,
+                    'band': bandname,
+                }
+
+            data_variables.append(data_variable)
+    return data_variables
+
+
 def import_repository_class(clsname):
     """ Get clsnameRepository class object """
     mod = import_data_module(clsname)
