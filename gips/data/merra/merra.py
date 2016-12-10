@@ -180,15 +180,16 @@ class merraAsset(Asset):
         },
         # MERRA2 CONST
         # http://goldsmr4.gesdisc.eosdis.nasa.gov/data/MERRA2_MONTHLY/M2C0NXASM.5.12.4/1980/MERRA2_101.const_2d_asm_Nx.00000000.nc4
-        'FRLAND': {
-            'description': 'Land Fraction',
-            'pattern': 'MERRA_FRLAND_*.tif',
-            'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
-            'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
-            'startdate': datetime.date(1980, 1, 1),
-            'latency': 0,
-            'bandnames': ['FRLAND']
-        }
+        # TODO: decide whether to support the static data set FRLAND which is grid cell land fraction
+        #'FRLAND': {
+        #    'description': 'Land Fraction',
+        #    'pattern': 'MERRA_FRLAND_*.tif',
+        #    'url': 'http://goldsmr4.sci.gsfc.nasa.gov:80/opendap/MERRA2_MONTHLY/M2C0NXASM.5.12.4',
+        #    'source': 'MERRA2_%s.const_2d_asm_Nx.%04d%02d%02d.nc4',
+        #    'startdate': datetime.date(1980, 1, 1),
+        #    'latency': 0,
+        #    'bandnames': ['FRLAND']
+        #}
         # TODO: profile products seem to be not implemented
         #'PROFILE': {
         #     'description': 'Atmospheric Profile',
@@ -234,14 +235,19 @@ class merraAsset(Asset):
 
         # TODO: instead of trying all possible vers, get the number from XML metadata
         success = False
-        for ver in ['100', '200', '300', '301', '400']:            
-            if asset != "FRLAND":
-                f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
-                loc = "%s/%04d/%02d/%s" % (url, date.year, date.month, f)
-            else:
-                f = cls._assets[asset]['source'] % (ver, 0, 0, 0)
-                loc = "%s/1980/%s" % (url, f)
+        for ver in ['100', '101', '200', '300', '301', '400']:            
+
+            # TODO: I believe the static FRLAND will probably not be kept in the long run
+            #if asset != "FRLAND":
+            #    f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
+            #    loc = "%s/%04d/%02d/%s" % (url, date.year, date.month, f)
+            #else:
+            #    f = cls._assets[asset]['source'] % (ver, 0, 0, 0)
+            #    loc = "%s/1980/%s" % (url, f)
             
+            f = cls._assets[asset]['source'] % (ver, date.year, date.month, date.day)
+            loc = "%s/%04d/%02d/%s" % (url, date.year, date.month, f)
+
             try:
                 with Timeout(30):          
                     dataset = open_url(loc)
@@ -263,6 +269,7 @@ class merraAsset(Asset):
             # e.g., it might be 302, or 401. It's impossible to predict what that number will be
             # TODO: search XML metadata to get the actual file name so you don't have to search
             raise Exception('Data unavailable (%s)' % loc)
+
         return dataset
 
     
@@ -352,11 +359,11 @@ class merraData(Data):
             'description': '3-dimensional wind speed for surface fluxes (m s-1)',
             'assets': ['SPEED']
         },
-        'FRLAND': {
-            'description': 'Land Fraction (static map)',
-            'assets': ['FRLAND']
-        },
-
+        # TODO: worry about static data later, possibly decide now
+        #'FRLAND': {
+        #    'description': 'Land Fraction (static map)',
+        #    'assets': ['FRLAND']
+        #},
         'tave': {
             'description': 'Ave daily air temperature data',
             'assets': ['T2M']
@@ -393,13 +400,11 @@ class merraData(Data):
             'description': 'Relative humidity (%)',
             'assets': ['QV2M', 'PS', 'T2M']
         },
-
-        '_temps': {
-            'description': 'Air temperature data',
-            'assets': ['TS', 'T2M', 'T10M']
-        },
-
-
+        # TODO: there was once a plan for these
+        #'_temps': {
+        #    'description': 'Air temperature data',
+        #    'assets': ['TS', 'T2M', 'T10M']
+        #},
         #'daily_weather': {
         #    'description': 'Climate forcing data, e.g. for DNDC',
         #    'assets': ['T2M', 'PRECTOT']
@@ -408,10 +413,9 @@ class merraData(Data):
         #    'description': 'Atmospheric Profile',
         #    'assets': ['PROFILE'],
         #}
-
     }
 
-
+    # TODO: eventually we will make composites
     # @classmethod
     # def process_composites(cls, inventory, products, **kwargs):
     #     for product in products:
@@ -483,6 +487,7 @@ class merraData(Data):
 
     def process(self, *args, **kwargs):
         products = super(merraData, self).process(*args, **kwargs)
+        sensor = "merra"
         if len(products) == 0:
             return
         for key, val in products.requested.items():
@@ -494,80 +499,59 @@ class merraData(Data):
                 continue
             fout = os.path.join(self.path, self.basename + "_merra_" + key)
 
-            ####################################################################
-
             if val[0] == "tave":
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 thourly = numpy.ma.MaskedArray(img.Read().squeeze())
                 thourly.mask = (thourly == MISSING)
-
                 temp = thourly.mean(axis=0)
                 temp = temp - 273.16
-
                 temp[temp.mask] = MISSING
                 imgout[0].Write(numpy.array(temp))
                 imgout.SetBandName(val[0], 1)
                 imgout.SetUnits('C')
                 imgout.SetNoData(MISSING)
-
-            ####################################################################
 
             if val[0] == "tmax":
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 thourly = numpy.ma.MaskedArray(img.Read().squeeze())
                 thourly.mask = (thourly == MISSING)
-
                 temp = thourly.max(axis=0)
                 temp = temp - 273.16
-
                 temp[temp.mask] = MISSING
                 imgout[0].Write(numpy.array(temp))
                 imgout.SetBandName(val[0], 1)
                 imgout.SetUnits('C')
                 imgout.SetNoData(MISSING)
-
-            ####################################################################
 
             if val[0] == "tmin":
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 thourly = numpy.ma.MaskedArray(img.Read().squeeze())
                 thourly.mask = (thourly == MISSING)
-
                 temp = thourly.min(axis=0)
                 temp = temp - 273.16
-
                 temp[temp.mask] = MISSING
                 imgout[0].Write(numpy.array(temp))
                 imgout.SetBandName(val[0], 1)
                 imgout.SetUnits('C')
                 imgout.SetNoData(MISSING)
 
-            ####################################################################
-
             if val[0] == "prcp":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 phourly = numpy.ma.MaskedArray(img.Read().squeeze())
                 phourly.mask = (phourly == MISSING)
-
                 prcp = phourly.mean(axis=0)
                 prcp = prcp * 36. * 24. * 1000
-
                 prcp[prcp.mask] = MISSING
                 imgout[0].Write(numpy.array(prcp))
                 imgout.SetBandName(val[0], 1)
                 imgout.SetUnits('mm d-1')
                 imgout.SetNoData(MISSING)
 
-
-            ####################################################################
-
             if val[0] == "wind":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 hourly = numpy.ma.MaskedArray(img.Read().squeeze())
@@ -580,10 +564,7 @@ class merraData(Data):
                 imgout.SetUnits('m s-1')
                 imgout.SetNoData(MISSING)
 
-            ####################################################################
-
             if val[0] == "srad":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 hourly = numpy.ma.MaskedArray(img.Read().squeeze())
@@ -596,10 +577,7 @@ class merraData(Data):
                 imgout.SetUnits('W m-2')
                 imgout.SetNoData(MISSING)
 
-            ####################################################################
-
             if val[0] == "shum":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 hourly = numpy.ma.MaskedArray(img.Read().squeeze())
@@ -612,10 +590,7 @@ class merraData(Data):
                 imgout.SetUnits('kg kg-1')
                 imgout.SetNoData(MISSING)
 
-            ####################################################################
-
             if val[0] == "patm":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 hourly = numpy.ma.MaskedArray(img.Read().squeeze())
@@ -628,27 +603,8 @@ class merraData(Data):
                 imgout.SetUnits('mb')
                 imgout.SetNoData(MISSING)
 
-
-            ####################################################################
-            # ##' @param qair specific humidity, dimensionless (e.g. kg/kg) ratio of water mass / total air mass
-            # ##' @param temp degrees C
-            # ##' @param press pressure in mb
-            # ##' @return rh relative humidity, ratio of actual water mixing ratio to saturation mixing ratio
-            # ##' @export
-            # ##' @author David LeBauer
-            # qair2rh <- function(qair, temp, press = 1013.25){
-            #     es <-  6.112 * exp((17.67 * temp)/(temp + 243.5))
-            #     e <- qair * press / (0.378 * qair + 0.622)
-            #     rh <- e / es
-            #     rh[rh > 1] <- 1
-            #     rh[rh < 0] <- 0
-            #     return(rh)
-            # }
-
-
             if val[0] == "rhum":
                 # based on 'QV2M', 'PS', 'T2M
-
                 img = gippy.GeoImage(assets[0])
                 qv2m = numpy.ma.MaskedArray(img.Read().squeeze()) # kg kg-1
                 qv2m.mask = (qv2m == MISSING)
@@ -658,35 +614,25 @@ class merraData(Data):
                 img = gippy.GeoImage(assets[2])
                 t2m = numpy.ma.MaskedArray(img.Read().squeeze()) # K
                 t2m.mask = (t2m == MISSING)
-
                 temp = t2m - 273.15
                 press = ps/100.
                 qair = qv2m
-
                 es = 6.112*numpy.exp((17.67*temp)/(temp + 243.5))
-
                 e = qair*press/(0.378*qair + 0.622)
                 rh = 100. * (e/es)
                 rh[rh > 100.] = 100.
                 rh[rh < 0.] = 0.
-
                 daily = rh.mean(axis=0)
                 daily[daily.mask] = MISSING
-
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 1)
                 imgout[0].Write(numpy.array(daily))
                 imgout.SetBandName(val[0], 1)
                 imgout.SetUnits('%')
                 imgout.SetNoData(MISSING)
 
-
-            ####################################################################
-
             if val[0] == "temp_modis":
-
                 img = gippy.GeoImage(assets[0])
                 imgout = gippy.GeoImage(fout, img, img.DataType(), 4)
-
                 # Aqua AM, Terra AM, Aqua PM, Terra PM
                 localtimes = [1.5, 10.5, 13.5, 22.5]
                 strtimes = ['0130LT', '1030LT', '1330LT', '2230LT']
@@ -718,6 +664,10 @@ class merraData(Data):
                     descr = " ".join([strtimes[itime], obsdate.isoformat()])
                     imgout.SetBandName(descr, itime + 1)
 
-            ####################################################################
-            elif val[0] == 'profile':
-                pass
+            # TODO: who needs a profile?
+            #elif val[0] == 'profile':
+            #    pass
+
+            # add product to inventory
+            self.AddFile(sensor, key, imgout.Filename())
+            #VerboseOut(' -> %s: processed in %s' % (os.path.basename(fname), datetime.datetime.now() - start), 1)
