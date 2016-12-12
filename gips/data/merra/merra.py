@@ -30,13 +30,10 @@ import urllib2
 
 # this has to be done before open_url is imported
 from gips.data.merra.install_basic_client import install_basic_client
-from gips.settings import REPOS
-USER = REPOS['merra']['username']
-PASSWD = REPOS['merra']['password']
-install_basic_client('urs.earthdata.nasa.gov', USER, PASSWD, False)
+import gips.utils as utils
 
 from pydap.client import open_url
-from pydap.util.socks import HTTPError
+#from pydap.util.socks import HTTPError
 
 import gippy
 from gips.data.core import Repository, Asset, Data
@@ -228,6 +225,10 @@ class merraAsset(Asset):
     @classmethod
     def opendap_fetch(cls, asset, date):
         """ Get array proxy from OpenDap for this asset and date """
+
+        USER = utils.settings().REPOS['merra']['username']
+        PASSWD = utils.settings().REPOS['merra']['password']
+        install_basic_client('urs.earthdata.nasa.gov', USER, PASSWD, False)
 
         url = cls._assets[asset].get('url', '')
         if url == '':
