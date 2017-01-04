@@ -10,13 +10,12 @@ from gips import utils
 pbs_directives = [
     # for meaning of directives see
     #   http://docs.adaptivecomputing.com/torque/4-0-2/Content/topics/commands/qsub.htm
-    '-N bsbreeder_job',
-    '-A bsbreeder_test_contract:bsbreeder_test_task',
+    '-N gips_job',
+    '-A gips_no_contract_specified:gips_no_task_specified',
     '-k oe',
     '-j oe',
     '-V',
     '-l walltime=1:00:00',
-    '-l nodes=1:ppn=1',
 ]
 
 import_block = """
@@ -29,7 +28,7 @@ from gips.datahandler import worker
 
 setup_block = """
 os.environ['GIPS_ORM'] = 'true'
-gippy.Options.SetVerbose(4) # substantial verbosity for testing purposes
+gippy.Options.SetVerbose(4) # substantial verbosity for diagnostic purposes
 orm.setup()
 """
 
@@ -46,7 +45,7 @@ def generate_script(operation, args_batch):
     #       i switched to double quotes because repr seems to generate singles in most cases
     lines.append('print "{}"'.format(repr(args_batch[0])))
 
-    # star of the show, the actual fetch
+    # star of the show, the actual command
     for args in args_batch:
         lines.append("worker.{}{}".format(operation, tuple(args)))
 
@@ -60,7 +59,7 @@ def submit(operation, args_ioi, batch_size=None, nproc=1):
         (exit status of qsub, qsub's stdout, qsub's stderr)
 
     operation:  Defines which function will be performed, and must be one of
-        'fetch', 'process', 'export', or 'postprocess'.
+        'fetch', 'process', or 'export_and_aggregate'.
     args_ioi:  An iterable of iterables; each inner iterable gives the
         arguments to one call to the chosen function.
     batch_size:  The work is divided among torque jobs; each job receives
@@ -68,10 +67,9 @@ def submit(operation, args_ioi, batch_size=None, nproc=1):
         that works the whole batch.
     nproc: number of processors to request
     """
-    if operation not in ('query', 'fetch', 'process', 'export', 'export_and_aggregate'):
-        # TODO: this error message does not match the 'operations'
-        err_msg = ("'{}' is an invalid operation (valid operations are "
-                   "'fetch', 'process', 'export', and 'postprocess')".format(operation))
+    if operation not in ('query', 'fetch', 'process', 'export_and_aggregate'):
+        err_msg = ("'{}' is an invalid operation (valid operations are 'query', "
+                   "'fetch', 'process', 'export_and_aggregate')".format(operation))
         raise ValueError(err_msg)
 
     if batch_size is None:
@@ -90,16 +88,17 @@ def submit(operation, args_ioi, batch_size=None, nproc=1):
     qsub_cmd.append('-lnodes=1:ppn={}'.format(nproc))
     
     for chunk in chunks:
-        job_script = generate_script(operation, chunk)
+        msg_prefix = "Error submitting job for '{}' operation".format(operation)
+        with utils.error_handler(msg_prefix, continuable=True):
+            job_script = generate_script(operation, chunk)
 
-        # open a pipe to the qsub command, then end job_string to it
-        proc = Popen(qsub_cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        proc.stdin.write(job_script)
-        out, err = proc.communicate()
-        outcomes.append((proc.returncode, out, err))
-
-    # TODO confirm qsub exited 0 (raise otherwise)
-    # TODO return best thing for checking on status
-    # TODO log err someplace
+            # open a pipe to the qsub command, then write job_string to it
+            proc = Popen(qsub_cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+            proc.stdin.write(job_script)
+            out, err = proc.communicate()
+            outcomes.append((proc.returncode, out, err))
+            if proc.returncode != 0:
+                raise ValueError("Expected qsub to exit 0 but got {}".format(proc.returncode),
+                                 proc.returncode, out, err)
 
     return outcomes
