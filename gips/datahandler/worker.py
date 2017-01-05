@@ -18,7 +18,7 @@ from gips.scripts.spatial_wrapper import aggregate
 def query (job):
     """Determine which assets to fetch and products to process"""
     with transaction.atomic():
-        job = dbinv.models.Job.objects.get(pk=job)
+        job = dbinv.models.Job.objects.select_for_update().get(pk=job)
         if job.status != 'initializing':
             # TODO log/msg about giving up here
             return job # not sure this is useful for anything
@@ -46,8 +46,7 @@ def fetch(driver, asset_type, tile, date):
     """Fetch the asset file specified."""
     # Notify everyone that this process is doing the fetch.
     with transaction.atomic():
-        # TODO confirm transaction.atomic prevents DB writes while it's active
-        asset = dbinv.models.Asset.objects.get(
+        asset = dbinv.models.Asset.objects.select_for_update().get(
                 driver=driver, asset=asset_type, tile=tile, date=date)
         if asset.status != 'scheduled':
             # TODO log/msg about giving up here
@@ -90,7 +89,7 @@ def process(driver, product_type, tile, date):
     """Produce the specified product file."""
     # Notify everyone that this process is doing the fetch.
     with transaction.atomic():
-        product = dbinv.models.Product.objects.get(
+        product = dbinv.models.Product.objects.select_for_update().get(
                 driver=driver, product=product_type, tile=tile, date=date)
         if product.status != 'scheduled':
             return product
@@ -161,7 +160,7 @@ def _aggregate(job, outdir, nproc=1):
 def export_and_aggregate(job_id, nprocs=1, outdir=None, **mosaic_kwargs):
     """Entirely TBD but does the same things as gips_project + zonal summary."""
     with transaction.atomic():
-        job = dbinv.models.Job.objects.get(pk=job_id)
+        job = dbinv.models.Job.objects.select_for_update().get(pk=job_id)
         if job.status != 'pp-scheduled':
             # TODO log/msg about giving up here
             return job # not sure this is useful for anything
