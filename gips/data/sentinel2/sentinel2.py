@@ -77,10 +77,6 @@ class sentinel2Asset(Asset):
             # 'K1': [0, 0, 0, 0, 0, 607.76, 0],  For conversion of LW bands to Kelvin
             # 'K2': [0, 0, 0, 0, 0, 1260.56, 0], For conversion of LW bands to Kelvin
             # 'tcap': _tcapcoef,
-
-            # colors needed for computing indices products such as NDVI
-            # color names are ['BLUE', 'GREEN', 'RED', 'NIR', 'SWIR1', 'SWIR2']
-	    'indices-bands': ['02', '03', '04', '08', '11', '12'],
         },
     }
     _sensors['S2B'] = {'description': 'Sentinel-2, Satellite B'}
@@ -107,6 +103,25 @@ class sentinel2Asset(Asset):
 
     # default resultant resolution for resampling during to Data().copy()
     _defaultresolution = (10, 10)
+
+
+    @classmethod
+    def band_spec(cls, query, field):
+        """cls._sensors has lots of useful bandwise data; query it with this method.
+
+        Call it with a band filename (directories optional) to get useful info:
+        sentinel2Asset.band_spec('/.../T..._B08.jp2', 'bandwidths')     -> 0.115
+        sentinel2Asset.band_spec('T..._B8A.jp2', 'spatial-resolutions') -> 20
+
+        As a special case, field='index' returns the band's numerical position in the list of
+        bands (useful for sorting).
+        """
+        index = cls._sensors['S2A']['band-strings'].index(query[-6:-4])
+        if field == 'index':
+            return index
+        else:
+            return cls._sensors['S2A'][field][index]
+
 
     def __init__(self, filename):
         """Inspect a single file and set some metadata.
@@ -305,9 +320,7 @@ class sentinel2Data(Data):
         raster_fn_pat = '^.*/GRANULE/.*/IMG_DATA/.*_B\d[\dA].jp2$'
         fnl = [df for df in datafiles if re.match(raster_fn_pat, df)]
         # have to sort the list or else gippy will get confused about which band is which
-        band_strings = sentinel2Asset._sensors[self.sensors[asset_type]]['band-strings']
-        # sorting is weird because the bands aren't named consistently
-        fnl.sort(key=lambda f: band_strings.index(f[-6:-4]))
+        fnl.sort(key=lambda f: sentinel2Asset.band_spec(f, 'index'))
         self.metadata = {'filenames': fnl}
 
     def read_raw(self):
@@ -392,14 +405,24 @@ class sentinel2Data(Data):
         # for all bands of interest.
         # TODO if the current date's ref-toa is already produced, open that instead, for performance
         # compile a list of the files needed for the proto-product
-        # TODO don't do this for the bands that are already at the right resolution, just use the
-        # already-opened geoimage raster bands from self.read_raw()
         src_filenames = [f for f in self.metadata['abs-filenames']
-                if f[-6:-4] in data_spec['indices-bands']]
-        # upsample each one in turn (some don't need it but do them all for simplicity)
+                if sentinel2Asset.band_spec(f, 'colors') in ('BLUE', 'GREEN', 'RED', 'NIR')]
+        files_needing_upsampling = [f for f in self.metadata['abs-filenames']
+                if sentinel2Asset.band_spec(f, 'colors') in ('SWIR1', 'SWIR2')]
         with utils.make_temp_dir() as tmpdir:
-            upsampled_filenames = [os.path.join(tmpdir, os.path.basename(f) + '.tif')
-                    for f in src_filenames]
+            for fn in files_needing_upsampling:
+                upsampled_fn = os.path.join(tmpdir, os.path.basename(fn) + '.tif')
+                cmd_str = 'gdalwarp -tr 10 10 {} {}'.format(fn, upsampled_fn)
+                cmd_args = shlex.split(cmd_str)
+                self._time_report('Upsampling:  ' + cmd_str, 3)
+                p = subprocess.Popen(cmd_args)
+                p.communicate()
+                if p.returncode != 0:
+                    raise IOError("Expected gdalwarp exit status 0, got {}".format(
+                            p.returncode))
+                src_filenames.append(upsampled_fn)
+
+            '''
             for in_fn, out_fn in zip(src_filenames, upsampled_filenames):
                 cmd_str = 'gdalwarp -tr 10 10 {} {}'.format(in_fn, out_fn)
                 cmd_args = shlex.split(cmd_str)
@@ -409,11 +432,12 @@ class sentinel2Data(Data):
                 if p.returncode != 0:
                     raise IOError("Expected gdalwarp exit status 0, got {}".format(
                             p.returncode))
-            upsampled_img = gippy.GeoImage(upsampled_filenames)
+            '''
+
+            upsampled_img = gippy.GeoImage(src_filenames)
             upsampled_img.SetMeta(md)
-            for band_num, band_string in enumerate(data_spec['indices-bands'], 1):
-                band_index = data_spec['band-strings'].index(band_string) # starts at 0
-                color_name = data_spec['colors'][band_index]
+            indices_colors = ['BLUE', 'GREEN', 'RED', 'NIR', 'SWIR1', 'SWIR2']
+            for band_num, color_name in enumerate(indices_colors, 1):
                 upsampled_img.SetBandName(color_name, band_num)
 
         self._time_report('Completed upsampling of Sentinel-2 asset bands')
@@ -421,9 +445,9 @@ class sentinel2Data(Data):
 
         # Process standard products
         for key, val in products.groups()['Standard'].items():
-            with utils.error_handler('Error creating product {} for {}'.format(
-                                            key, os.path.basename(self.assets[asset_type].filename),
-                                     continuable=True)):
+            err_msg = 'Error creating product {} for {}'.format(
+                    key, os.path.basename(self.assets[asset_type].filename))
+            with utils.error_handler(err_msg, continuable=True):
                 # putting the conditional in now so more products can be added later
                 if val[0] == 'ref':
                     # TODO note that this will need editing when atmo correction is implemented
