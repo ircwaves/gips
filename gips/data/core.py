@@ -219,7 +219,7 @@ class Asset(object):
     ##########################################################################
     # Child classes should not generally have to override anything below here
     ##########################################################################
-    def datafiles(self):
+    def datafiles(self, vsi_path=False):
         """ Get list of readable datafiles from asset (multiple filenames if tar or hdf file) """
         path = os.path.dirname(self.filename)
         indexfile = os.path.join(path, self.filename + '.index')
@@ -247,7 +247,7 @@ class Asset(object):
                 return [self.filename]
 
 
-    def extract(self, filenames=[]):
+    def extract(self, filenames=[], dest_dir=None):
         """ Extract filenames from asset (if archive file) """
         if tarfile.is_tarfile(self.filename):
             tfile = tarfile.open(self.filename)
